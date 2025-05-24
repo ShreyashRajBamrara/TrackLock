@@ -1,127 +1,153 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class Mover : MonoBehaviour
 {
-    [Header("Movement Settings")]
-    [SerializeField] float speed = 10f;
-    [SerializeField] float recalculationCooldown = 0.5f;
+    [SerializeField][Range(0f, 10f)] float speed = 5f;
     
-    private GridManager gridManager;
-    private Pathfinder pathfinder;
-    private Coroutine moveRoutine;
-    private bool recalculationPending;
-    private float lastRecalculationTime;
-    private Vector3 currentTarget;
+    Pathfinder pathfinder;
+    GridManager gridManager;
+    
+    List<Node> path = new List<Node>();
+    Coroutine movementCoroutine;
+    Vector2Int currentCoords;
+    bool isOnOriginalPath = true;
 
     void Awake()
     {
-        gridManager = FindObjectOfType<GridManager>();
         pathfinder = FindObjectOfType<Pathfinder>();
+        gridManager = FindObjectOfType<GridManager>();
     }
 
     void OnEnable()
     {
-        ResetTrain();
-        StartMovement();
-    }
-
-    void Update()
-    {
-        if (recalculationPending && Time.time > lastRecalculationTime + recalculationCooldown)
-        {
-            RecalculatePath(false);
-            recalculationPending = false;
-        }
-    }
-
-    void ResetTrain()
-    {
-        transform.position = gridManager.GetPositionFromCoordinates(pathfinder.startCoordinates);
-        currentTarget = transform.position;
-        lastRecalculationTime = Time.time;
-    }
-
-    void StartMovement()
-    {
-        if (moveRoutine != null) StopCoroutine(moveRoutine);
-        moveRoutine = StartCoroutine(MovementRoutine());
-    }
-
-    public void OnTrackChanged()
-    {
-        if (!recalculationPending)
-        {
-            recalculationPending = true;
-            lastRecalculationTime = Time.time;
-        }
-    }
-
-    void RecalculatePath(bool resetPath)
-    {
-        Vector2Int currentCoords = resetPath ? 
-            pathfinder.startCoordinates : 
-            gridManager.GetCoordinatesFromPosition(transform.position);
-            
-        pathfinder.startCoordinates = currentCoords;
-        pathfinder.RecalculatePath();
-    }
-
-    IEnumerator MovementRoutine()
-    {
-        while (true)
-        {
-            var path = pathfinder.GetCurrentPath();
-            if (path == null || path.Count <= 1)
-            {
-                yield return new WaitForSeconds(0.1f);
-                continue;
-            }
-
-            // Find closest node in path
-            int closestIndex = 0;
-            float closestDistance = float.MaxValue;
-            for (int i = 0; i < path.Count; i++)
-            {
-                float dist = Vector3.Distance(transform.position, 
-                    gridManager.GetPositionFromCoordinates(path[i].coordinates));
-                if (dist < closestDistance)
-                {
-                    closestDistance = dist;
-                    closestIndex = i;
-                }
-            }
-
-            // Move through the path
-            for (int i = closestIndex; i < path.Count; i++)
-            {
-                currentTarget = gridManager.GetPositionFromCoordinates(path[i].coordinates);
-                
-                while (Vector3.Distance(transform.position, currentTarget) > 0.05f)
-                {
-                    // Skip if this node becomes blocked
-                    if (path[i].isBlocked)
-                    {
-                        recalculationPending = true;
-                        yield break;
-                    }
-
-                    transform.position = Vector3.MoveTowards(
-                        transform.position, 
-                        currentTarget, 
-                        speed * Time.deltaTime);
-                    
-                    transform.LookAt(currentTarget);
-                    yield return null;
-                }
-            }
-
-            yield return null;
-        }
+        ResetToOriginalPath();
+        RecalculatePath(true);
     }
 
     void OnDisable()
     {
-        if (moveRoutine != null) StopCoroutine(moveRoutine);
+        StopMovementCoroutine();
+    }
+
+    void ResetToOriginalPath()
+    {
+        currentCoords = pathfinder.GetStartCoordinates();
+        transform.position = gridManager.GetPositionFromCoordinates(currentCoords);
+        isOnOriginalPath = true;
+    }
+
+    public void RecalculatePath(bool resetToOriginal)
+    {
+        Vector2Int coordinates;
+        
+        if (resetToOriginal || !isOnOriginalPath)
+        {
+            coordinates = pathfinder.GetStartCoordinates();
+            isOnOriginalPath = true;
+        }
+        else
+        {
+            coordinates = currentCoords;
+        }
+
+        StopMovementCoroutine();
+        path.Clear();
+        
+        // Always calculate path from start to finish
+        path = pathfinder.GetNewPathFrom(pathfinder.GetStartCoordinates());
+        
+        if (path.Count == 0)
+        {
+            Debug.LogWarning("Pathfinder returned empty path");
+            gameObject.SetActive(false);
+            return;
+        }
+
+        // If we're continuing from current position, find our closest node
+        if (!resetToOriginal)
+        {
+            int closestIndex = FindClosestPathIndex();
+            if (closestIndex >= 0)
+            {
+                path = path.GetRange(closestIndex, path.Count - closestIndex);
+                isOnOriginalPath = false;
+            }
+        }
+
+        movementCoroutine = StartCoroutine(FollowPath());
+    }
+
+    int FindClosestPathIndex()
+    {
+        float minDistance = float.MaxValue;
+        int closestIndex = -1;
+        
+        for (int i = 0; i < path.Count; i++)
+        {
+            float dist = Vector3.Distance(
+                transform.position,
+                gridManager.GetPositionFromCoordinates(path[i].coordinates)
+            );
+            
+            if (dist < minDistance)
+            {
+                minDistance = dist;
+                closestIndex = i;
+            }
+        }
+        
+        return closestIndex;
+    }
+
+    void StopMovementCoroutine()
+    {
+        if (movementCoroutine != null)
+        {
+            StopCoroutine(movementCoroutine);
+            movementCoroutine = null;
+        }
+    }
+
+    IEnumerator FollowPath()
+    {
+        for (int i = 1; i < path.Count; i++)
+        {
+            Node currentNode = path[i-1];
+            Node nextNode = path[i];
+            
+            Vector3 startPos = transform.position;
+            Vector3 endPos = gridManager.GetPositionFromCoordinates(nextNode.coordinates);
+            float travelPercent = 0f;
+
+            transform.LookAt(endPos);
+            currentCoords = currentNode.coordinates;
+
+            while (travelPercent < 1f)
+            {
+                if (nextNode.isBlocked)
+                {
+                    RecalculatePath(false);
+                    yield break;
+                }
+
+                travelPercent += Time.deltaTime * speed;
+                transform.position = Vector3.Lerp(startPos, endPos, travelPercent);
+                yield return null;
+            }
+        }
+
+        OnPathComplete();
+    }
+
+    void OnPathComplete()
+    {
+        gameObject.SetActive(false);
+    }
+
+    public void OnTrackChanged()
+    {
+        RecalculatePath(false);
     }
 }

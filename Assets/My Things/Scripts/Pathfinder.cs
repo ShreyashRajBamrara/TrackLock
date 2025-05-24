@@ -14,7 +14,7 @@ public class Pathfinder : MonoBehaviour
     Queue<Node> frontier = new Queue<Node>();
     Dictionary<Vector2Int, Node> reached = new Dictionary<Vector2Int, Node>();
     readonly Vector2Int[] directions = { Vector2Int.right, Vector2Int.left, Vector2Int.up, Vector2Int.down };
-    
+
     GridManager gridManager;
     Dictionary<Vector2Int, Node> grid = new Dictionary<Vector2Int, Node>();
     List<Node> currentPath = new List<Node>();
@@ -30,11 +30,11 @@ public class Pathfinder : MonoBehaviour
 
     void Start()
     {
-        if (grid.ContainsKey(startCoordinates)) 
+        if (grid.ContainsKey(startCoordinates))
         {
             startNode = grid[startCoordinates];
         }
-        
+
         if (grid.ContainsKey(destinationCoordinates))
         {
             destinationNode = grid[destinationCoordinates];
@@ -89,7 +89,7 @@ public class Pathfinder : MonoBehaviour
             if (grid.ContainsKey(neighborCoords))
             {
                 Node neighbor = grid[neighborCoords];
-                
+
                 if (neighbor.isTrack && !neighbor.isBlocked)
                 {
                     neighbors.Add(neighbor);
@@ -111,7 +111,7 @@ public class Pathfinder : MonoBehaviour
     public List<Node> BuildPath()
     {
         List<Node> path = new List<Node>();
-        
+
         // Clear previous path visuals
         foreach (var node in grid.Values)
         {
@@ -130,6 +130,24 @@ public class Pathfinder : MonoBehaviour
         path.Reverse();
         return path;
     }
+   public List<Node> GetNewPathFrom(Vector2Int customStart)
+{
+    if (!grid.ContainsKey(customStart) || !grid.ContainsKey(destinationCoordinates))
+    {
+        Debug.LogWarning("Invalid start or destination coordinates.");
+        return new List<Node>();
+    }
+
+    gridManager.ResetNodes();
+
+    startCoordinates = customStart;
+    startNode = grid[customStart];
+
+    BreadthFirstSearch();
+
+    return BuildPath();
+}
+
 
     // Public methods to modify coordinates
     public void SetStartCoordinates(Vector2Int newCoordinates)
