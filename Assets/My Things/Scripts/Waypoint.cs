@@ -4,6 +4,9 @@ using System.Collections.Generic;
 public class Waypoint : MonoBehaviour
 {
     [Header("Node Types")]
+    [SerializeField] GameObject lever;
+    [SerializeField] private Color activeColor = Color.green;
+    [SerializeField] private Color defaultColor = Color.red;
     [SerializeField] private bool isTrack;
     [SerializeField] private bool isLever;
     
@@ -55,17 +58,28 @@ public class Waypoint : MonoBehaviour
             Debug.Log($"Clicked lever: {transform.name}");
             isBlocking = !isBlocking;
 
-            foreach (Waypoint node in nodes_to_block)
+            if (lever != null)
             {
-                node.SetBlocked(isBlocking);
-                Debug.Log($"{(isBlocking ? "Blocked" : "Unblocked")} node: {node.transform.name}");
+                Transform cylinder = lever.transform.Find("Cylinder");
+                Renderer rend = cylinder.GetComponent<Renderer>();
+                rend.material.color = isBlocking ? activeColor : defaultColor;    
             }
+            
+
+            foreach (Waypoint node in nodes_to_block)
+                {
+                    node.SetBlocked(isBlocking);
+                    Debug.Log($"{(isBlocking ? "Blocked" : "Unblocked")} node: {node.transform.name}");
+
+                }
 
             // Recalculate path when lever is toggled
             if (pathfinder != null)
             {
                 pathfinder.RecalculatePath();
             }
+
+
         }
     }
 

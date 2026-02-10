@@ -5,6 +5,9 @@ using UnityEngine;
 public class Mover : MonoBehaviour
 {
     [SerializeField][Range(0f, 10f)] float speed = 5f;
+    [SerializeField] GameObject WinnerCanva;
+
+    LevelChanger level_Changer_script;
     
     Pathfinder pathfinder;
     GridManager gridManager;
@@ -14,10 +17,16 @@ public class Mover : MonoBehaviour
     Vector2Int currentCoords;
     bool isOnOriginalPath = true;
 
+    [SerializeField] AudioClip winSound;
+    [SerializeField][Range(0f, 1f)] float winSoundVolume = 0.8f;
+    AudioSource audioSource;
+
     void Awake()
     {
         pathfinder = FindObjectOfType<Pathfinder>();
         gridManager = FindObjectOfType<GridManager>();
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
     }
 
     void OnEnable()
@@ -143,7 +152,30 @@ public class Mover : MonoBehaviour
 
     void OnPathComplete()
     {
-        gameObject.SetActive(false);
+        PlayWinSound(); // Play sound FIRST
+        Show_Win_UI();
+        gameObject.SetActive(false); // Disable AFTER playing sound
+    }
+
+    void PlayWinSound()
+    {
+        if (winSound != null)
+        {
+            // Create temporary GameObject for audio playback
+            GameObject soundPlayer = new GameObject("TempAudio");
+            AudioSource tempSource = soundPlayer.AddComponent<AudioSource>();
+            tempSource.volume = winSoundVolume;
+            tempSource.PlayOneShot(winSound);
+            Destroy(soundPlayer, winSound.length); // Clean up after playback
+        }
+    }
+    void Show_Win_UI()
+    {
+        Time.timeScale = 0f;
+        if (WinnerCanva != null)
+        {
+            WinnerCanva.SetActive(true);
+        }
     }
 
     public void OnTrackChanged()

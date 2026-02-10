@@ -394,10 +394,15 @@
 "Assets/My Things/Scripts/CoordinateLabel.cs"
 "Assets/My Things/Scripts/GridManager.cs"
 "Assets/My Things/Scripts/LevelChanger.cs"
+"Assets/My Things/Scripts/LevelMenu.cs"
+"Assets/My Things/Scripts/MainMenu.cs"
 "Assets/My Things/Scripts/Mover.cs"
 "Assets/My Things/Scripts/Node.cs"
+"Assets/My Things/Scripts/NPCmover.cs"
 "Assets/My Things/Scripts/ObjectPool.cs"
 "Assets/My Things/Scripts/Pathfinder.cs"
+"Assets/My Things/Scripts/RestartButton.cs"
+"Assets/My Things/Scripts/Train Collison.cs"
 "Assets/My Things/Scripts/Waypoint.cs"
 -langversion:9.0
 

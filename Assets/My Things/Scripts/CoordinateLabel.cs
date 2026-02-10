@@ -2,7 +2,7 @@ using UnityEngine;
 using TMPro;
 
 [ExecuteAlways]
-public class CoordinateLabel : MonoBehaviour
+public class TileTypeLabel : MonoBehaviour
 {
     [Header("Color Settings")]
     [SerializeField] Color blockedColor = Color.red;
@@ -13,41 +13,40 @@ public class CoordinateLabel : MonoBehaviour
     [SerializeField] Color defaultColor = Color.white;
 
     [Header("Visibility")]
-    [SerializeField] private bool isVisible = true;
     [SerializeField] private KeyCode toggleKey = KeyCode.C;
+    private bool showCoordinates = false;
 
     private TextMeshPro label;
-    private Vector2Int coordinates;
     private GridManager gridManager;
     private Pathfinder pathfinder;
+    private Vector2Int coordinates;
 
     void Awake()
     {
         label = GetComponent<TextMeshPro>();
         if (label == null)
         {
-            Debug.LogError("TextMeshPro component not found on CoordinateLabel");
+            Debug.LogError("TextMeshPro component not found ");
             return;
         }
 
-        label.enabled = isVisible;
         InitializeReferences();
-        DisplayCoordinates();
+        UpdateVisuals();
     }
 
     void Update()
     {
         if (Application.isPlaying && Input.GetKeyDown(toggleKey))
         {
-            ToggleVisibility();
+            showCoordinates = !showCoordinates;
+            UpdateVisuals();
         }
 
-        // Only update these in Editor or if visible
-        if (!Application.isPlaying || isVisible)
+        if (!Application.isPlaying || showCoordinates)
         {
-            DisplayCoordinates();
+            UpdateCoordinates();
+            UpdateTileColor();
             UpdateTileName();
-            ColorCoordinates();
         }
     }
 
@@ -63,19 +62,20 @@ public class CoordinateLabel : MonoBehaviour
         }
     }
 
-    void ToggleVisibility()
-    {
-        isVisible = !isVisible;
-        label.enabled = isVisible;
-    }
-
-    void DisplayCoordinates()
+    void UpdateCoordinates()
     {
         if (gridManager == null) return;
 
-        coordinates.x = Mathf.RoundToInt(transform.parent.position.x / gridManager.UnityGridSize);
-        coordinates.y = Mathf.RoundToInt(transform.parent.position.z / gridManager.UnityGridSize);
-        label.text = $"({coordinates.x},{coordinates.y})";
+        coordinates = new Vector2Int(
+            Mathf.RoundToInt(transform.parent.position.x / gridManager.UnityGridSize),
+            Mathf.RoundToInt(transform.parent.position.z / gridManager.UnityGridSize)
+        );
+    }
+
+    void UpdateVisuals()
+    {
+        label.enabled = showCoordinates;
+        label.text = showCoordinates ? $"({coordinates.x},{coordinates.y})" : "";
     }
 
     void UpdateTileName()
@@ -83,41 +83,18 @@ public class CoordinateLabel : MonoBehaviour
         transform.parent.name = $"Tile {coordinates}";
     }
 
-    void ColorCoordinates()
+    void UpdateTileColor()
     {
-        if (gridManager == null || gridManager.Grid == null)
-        {
-            InitializeReferences();
-            if (gridManager == null || gridManager.Grid == null) return;
-        }
+        if (gridManager == null || gridManager.Grid == null) return;
 
         Node node = gridManager.GetNode(coordinates);
         if (node == null) return;
 
-        // Priority order for coloring
-        if (node.isBlocked)
-        {
-            label.color = blockedColor;
-        }
-        else if (node.isLever)
-        {
-            label.color = leverColor;
-        }
-        else if (node.isPath && pathfinder != null && pathfinder.GetCurrentPath().Contains(node))
-        {
-            label.color = pathColor;
-        }
-        else if (node.isExplored)
-        {
-            label.color = exploredColor;
-        }
-        else if (node.isTrack)
-        {
-            label.color = trackColor;
-        }
-        else
-        {
-            label.color = defaultColor;
-        }
+        if (node.isBlocked) label.color = blockedColor;
+        else if (node.isLever) label.color = leverColor;
+        else if (node.isPath && pathfinder != null && pathfinder.GetCurrentPath().Contains(node)) label.color = pathColor;
+        else if (node.isExplored) label.color = exploredColor;
+        else if (node.isTrack) label.color = trackColor;
+        else label.color = defaultColor;
     }
 }
