@@ -24,19 +24,6 @@ TrackLock is a Unity-based puzzle game that challenges players to efficiently na
 - Coordinate system for train movement
 - Component-based architecture
 
-## Development Team
-
-- Nikita Sharma: Level Design
-- Jessica Jasmine John: Grid Management & Node Properties
-- Shreyash Raj Bamrara: Backend Development & Integration
-- Kavyanjali Parmar: Pathfinding Logic & Additional Features
-
-## Project Status
-
-- Core Systems: Completed
-- Game Features: 70% Complete
-- Technical Documentation: 80% Complete
-- Future Components: Pending
 
 ## Getting Started
 
@@ -53,19 +40,3 @@ The project includes comprehensive testing for:
 - Node system
 - Component integration
 - Performance metrics
-
-## Future Updates
-
-- Additional pathfinding algorithms
-- Advanced level designs
-- UI/UX improvements
-- Audio system implementation
-- Performance optimizations
-
-## License
-
-This project is proprietary and confidential.
-
-## Contact
-
-For more information about the project, please contact the development team.
